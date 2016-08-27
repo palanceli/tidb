@@ -1,4 +1,4 @@
-# -*- coding: cp936 -*-
+# -*- coding: utf8 -*-
 # 
 import  logging
 import  sys
@@ -69,7 +69,7 @@ class PyNetMaker(object):
         return idxList                  
         
     def preProcess(self, inputStr):
-        seg = {}
+        seg = {}    # {..., n:[an, bn, cn...], ...} inputStr第n个字符开头能匹配到的所有音节串
         length = len(inputStr)
         for i in range(length):
             idxList = self.findValidSyllable(inputStr[i : ])
@@ -92,6 +92,8 @@ class PyNetMaker(object):
         
     def Proc(self, inputStr):
         seg = self.preProcess(inputStr)
+        print seg
+        # i是第几个字符，j是该字符的第几条弧，pyNet是[(位置,弧长), ...]的序列
         i = 0
         j = 0
         pyNet = []
