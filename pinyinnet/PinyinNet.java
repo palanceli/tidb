@@ -47,13 +47,9 @@ public class PinyinNet {
 
 		for(int i=0; i<pyStrArray.size(); i++){
 			String syllable = pyStrArray.get(i);
-			if(!bHit){
-				if(syllable.charAt(0) == str.charAt(0))
-					bHit = true;
-			}else{
-				if(syllable.charAt(0) != str.charAt(0))
-					return result;
-			}
+			if(syllable.charAt(0) > str.charAt(0))
+				return result;
+
 			if(str.startsWith(syllable)){
 				result.add(syllable.length() - 1);
 			}
@@ -76,7 +72,8 @@ public class PinyinNet {
 		for(Integer item : pyNet){
 			int nStart = (item.intValue() >> 16) & 0x0000ffff;
 			int	nIdx = item.shortValue();
-			str = str.concat(inputStr.substring(nStart, nStart + seg.get(nStart).get(nIdx) + 1));
+			int nEnd = nStart + seg.get(nStart).get(nIdx) + 1;
+			str = str.concat(inputStr.substring(nStart, nEnd));
 			str = str.concat("'");
 		}
 		System.out.println(str);
@@ -119,6 +116,7 @@ public class PinyinNet {
 		}catch(Exception e){
 			e.printStackTrace();
 		}
+		// System.out.println(pyMap.getPyStrArray());
 		PinyinNet pinyinNet = new PinyinNet(pyMap);
 
 		Console console = System.console();
