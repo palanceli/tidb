@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
-#include <string>
+#include <string.h>
 
 #define LOG(format, ...) printf("[%-12s:%-4d ] "format"\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
@@ -71,17 +71,17 @@ void PyMap::Print()
 	}
 }
 
-
 class PyNetMaker
 {
 public:
-	PyNetMaker(PyMap* pyMap):mPyMap(pyMap){}
-	void MainProc(const char *inputStr);
+  PyNetMaker(PyMap* pyMap):mPyMap(pyMap){}
+  void MainProc(const char *inputStr);
 protected:
-	short** preProcess(const char* inputStr);
-	void printPyArc(const char* inputStr, short* arc[]);
-
-	PyMap* mPyMap;
+  short** preProcess(const char* inputStr);
+  void printPyArc(const char* inputStr, short* arc[]);
+  void printPyNet(const char* inputStr, int* route, short** arcArray);
+  
+  PyMap* mPyMap;
 };
 
 short** PyNetMaker::preProcess(const char* inputStr)
@@ -130,6 +130,20 @@ void PyNetMaker::printPyArc(const char* inputStr, short* arcArray[])
   }
 }
 
+void PyNetMaker::printPyNet(const char* inputStr, int* route, short** arcArray)
+{
+  char result[256] = {0};
+  for(int i=0; i<strlen(inputStr); i++){
+    int value = route[i];
+    short nStart = (value >> 16) & 0x0000ffff;
+    short nIdx = value & 0x0000ffff;
+
+    strncat(result, inputStr + nStart, arcArray[nStart][nIdx + 1] + 1);
+    strcat(result, "'");
+  }
+  printf("%s\n", result);
+}
+
 void PyNetMaker::MainProc(const char* inputStr)
 {
   if(mPyMap == NULL || inputStr == NULL || strlen(inputStr) == 0)
@@ -140,7 +154,35 @@ void PyNetMaker::MainProc(const char* inputStr)
 
   int nStart = 0;
   int nIdx = 0;
+  int* route = (int*)malloc(sizeof(int) * strlen(inputStr));
+  int top = 0;
+  while(1){
+    if(nStart<strlen(inputStr) && arcArray[nStart][0]!=0 && nIdx<arcArray[nStart][0]){
+      route[top++] = (((nStart << 16) & 0xffff0000) | (nIdx & 0x0000ffff));
+      
+      nStart += arcArray[nStart][nIdx + 1] + 1;
+      nIdx = 0;
+
+      if(nStart == strlen(inputStr))
+        printPyNet(inputStr, route, arcArray);
+    }else{
+      if(nStart == 0)
+        return;
+      int value = route[--top];
+      nStart = (value >> 16) & 0x0000ffff;
+      nIdx = (value & 0x0000ffff) + 1;
+    }
+    LOG("route:");
+    for(int i=top - 1; i>=0; i--){
+      LOG("%4d, %4d", (route[i] >> 16) & 0x0000ffff, route[i] & 0x0000ffff);
+    }
+    LOG("=========");
+  }
   
+  for(int i=0; i<strlen(inputStr); i++){
+    free(arcArray[i]);
+  }
+  free(arcArray);
 }
 
 int main(int argc, char *argv[])
