@@ -2,7 +2,8 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <vector>
+
+#define LOG(format, ...) printf("[%-12s:%-4d ] "format"\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 class PyMap
 {
@@ -77,85 +78,76 @@ public:
 	PyNetMaker(PyMap* pyMap):mPyMap(pyMap){}
 	void MainProc(const char *inputStr);
 protected:
-	int preProcess(const char* inputStr, int* arc[], int len);
-	int findValidSyllable(const char* inputStr, int* result, int len);
-	void printPyArc(const char* inputStr, int* arc[]);
+	short** preProcess(const char* inputStr);
+	void printPyArc(const char* inputStr, short* arc[]);
 
 	PyMap* mPyMap;
 };
 
-int PyNetMaker::findValidSyllable(const char* inputStr, int* result, int len)
-{
-	if(mPyMap == NULL || result == NULL || len < PyMap::MaxPyMap)
-		return -1;
-
-	int cHit = 0;
-	if(strlen(inputStr) == 0)
-		return cHit;
-
-	for(int i=0; i<mPyMap->GetPyMapSize(); i++){
-		char* syllable = mPyMap->GetPyMap()[i];
-		if(syllable[0] > inputStr[0])
-			return cHit;
-		if(strstr(inputStr, syllable) == inputStr){
-			result[cHit++] = strlen(syllable) - 1;
-		}
-	}
-	return cHit;
-}
-
-int PyNetMaker::preProcess(const char* inputStr, int* arc[], int len)
+short** PyNetMaker::preProcess(const char* inputStr)
 {	// arc是[..., [an, bn, cn...], ...] inputStr每个字符开头能匹配到的所有音节串长度
-	if(len != strlen(inputStr))
-		return -1;
+  LOG("preProcess...");
+  if(mPyMap == NULL || inputStr == NULL || strlen(inputStr) == 0)
+    return NULL;
 
-	int seg[PyMap::MaxPyMap] = {0};
-	for(int i=0; i<strlen(inputStr); i++){
-		int c = findValidSyllable(inputStr + i, seg, PyMap::MaxPyMap);
-		if(c <= 0)
-			arc[i] = NULL;
-		else{
-			arc[i] = new int[c];
-			memcpy(arc[i], seg, c * sizeof(int));
-		}
-	}
-	return 0;
+  short** arcArray = (short**)malloc(sizeof(short*) * strlen(inputStr));
+
+  for(int i=0; i<strlen(inputStr); i++){
+    const char* tmpStr = inputStr + i;
+    
+    static const int nMaxArc = 16;
+    short arcLen[nMaxArc] = {0};
+    int arcCount = 0;
+    for(int j=0; j<mPyMap->GetPyMapSize(); j++){
+      char* syllable = mPyMap->GetPyMap()[j];
+      if(syllable[0] > tmpStr[0])
+        break;
+
+      if(strstr(tmpStr, syllable) == tmpStr){
+        arcLen[arcCount++] = strlen(syllable) - 1;
+      }
+    }
+
+    arcArray[i] = (short*)malloc(sizeof(short) * arcCount + 1);
+    arcArray[i][0] = arcCount;
+    memcpy(arcArray[i] + 1, arcLen, sizeof(short) * arcCount);
+  }
+  return arcArray;
 }
 
-void PyNetMaker::printPyArc(const char* inputStr, int* arcArray[])
+void PyNetMaker::printPyArc(const char* inputStr, short* arcArray[])
 {
-	printf("arc of [%s]", inputStr);
-	for(int i=0; i<strlen(inputStr); i++){
-		int* arc = arcArray[i];
-		if(arc == NULL){
-			printf("(), ");
-			continue;
-		}
-		printf("(");
-		for(int j=0; j<(sizeof(arc)/sizeof(int)); j++){
-			printf("%d ", arc[j]);
-		}
-		printf("), ");
-	}
-	printf("\n");	
+  for(int i=0; i<strlen(inputStr); i++){
+    char msg[256] = {0};
+    sprintf(msg, "%16s: %4d arcs (", inputStr+i, arcArray[i][0]);
+    for(int j=0; j<arcArray[i][0]; j++){
+      char tmp[8] = {0};
+      sprintf(tmp, "%d, ", arcArray[i][j+1]);
+      strcat(msg, tmp);
+    }
+    strcat(msg, ")");
+    LOG("%s", msg);
+  }
 }
 
 void PyNetMaker::MainProc(const char* inputStr)
 {
-	if(inputStr == NULL)
-		return;
+  if(mPyMap == NULL || inputStr == NULL || strlen(inputStr) == 0)
+    return;
 
-	int** arcArray = new int*[strlen(inputStr)];
-	preProcess(inputStr, arcArray, strlen(inputStr));
-	printPyArc(inputStr, arcArray);
+  short** arcArray = preProcess(inputStr);
+  printPyArc(inputStr, arcArray);
+
+  int nStart = 0;
+  int nIdx = 0;
+  
 }
 
 int main(int argc, char *argv[])
 {
-	PyMap pyMap;
-	pyMap.LoadFromTxt("pinyin_list.txt");
-	pyMap.Print();
-	PyNetMaker pyNetMaker(&pyMap);
-	pyNetMaker.MainProc("xianguo");
-	return 0;
+  PyMap pyMap;
+  pyMap.LoadFromTxt("pinyin_list.txt");
+  PyNetMaker pyNetMaker(&pyMap);
+  pyNetMaker.MainProc("xianguo");
+  return 0;
 }
