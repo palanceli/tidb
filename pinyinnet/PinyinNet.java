@@ -42,7 +42,6 @@ public class PinyinNet {
 		ArrayList<Integer> result = new ArrayList<Integer>();
 		if(str.length() == 0)
 			return result;
-		boolean bHit = false;
 		ArrayList<String> pyStrArray = mPyMap.getPyStrArray();
 
 		for(int i=0; i<pyStrArray.size(); i++){

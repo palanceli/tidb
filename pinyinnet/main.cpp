@@ -3,7 +3,11 @@
 #include <fstream>
 #include <string.h>
 
+#if 1
 #define LOG(format, ...) printf("[%-12s:%-4d ] "format"\n", __FILE__, __LINE__, ##__VA_ARGS__)
+#else
+#define LOG(format, ...) 
+#endif
 
 class PyMap
 {
@@ -79,7 +83,7 @@ public:
 protected:
   short** preProcess(const char* inputStr);
   void printPyArc(const char* inputStr, short* arc[]);
-  void printPyNet(const char* inputStr, int* route, short** arcArray);
+  void printPyNet(const char* inputStr, int* route, int top, short** arcArray);
   
   PyMap* mPyMap;
 };
@@ -94,7 +98,6 @@ short** PyNetMaker::preProcess(const char* inputStr)
 
   for(int i=0; i<strlen(inputStr); i++){
     const char* tmpStr = inputStr + i;
-    
     static const int nMaxArc = 16;
     short arcLen[nMaxArc] = {0};
     int arcCount = 0;
@@ -130,10 +133,10 @@ void PyNetMaker::printPyArc(const char* inputStr, short* arcArray[])
   }
 }
 
-void PyNetMaker::printPyNet(const char* inputStr, int* route, short** arcArray)
+void PyNetMaker::printPyNet(const char* inputStr, int* route, int top, short** arcArray)
 {
   char result[256] = {0};
-  for(int i=0; i<strlen(inputStr); i++){
+  for(int i=0; i<top; i++){
     int value = route[i];
     short nStart = (value >> 16) & 0x0000ffff;
     short nIdx = value & 0x0000ffff;
@@ -164,7 +167,7 @@ void PyNetMaker::MainProc(const char* inputStr)
       nIdx = 0;
 
       if(nStart == strlen(inputStr))
-        printPyNet(inputStr, route, arcArray);
+        printPyNet(inputStr, route, top, arcArray);
     }else{
       if(nStart == 0)
         return;
@@ -178,7 +181,7 @@ void PyNetMaker::MainProc(const char* inputStr)
     }
     LOG("=========");
   }
-  
+  free(route);
   for(int i=0; i<strlen(inputStr); i++){
     free(arcArray[i]);
   }
